@@ -55,7 +55,7 @@ class Player(pygame.sprite.Sprite):
                 self.velocity.y = self.MAX_SPEED
             elif(self.velocity.y < 0):
                 self.velocity.y = -self.MAX_SPEED
-        #Handles collision
+        #Detects collision
         collideRectX = self.rect.copy()
         #Simulates moving the rectangle by the velocity, if it crashes into a wall the velocity is decreased to stop at the wall
         collideRectX.x += self.velocity.x
@@ -90,15 +90,31 @@ class Wall(pygame.sprite.Sprite):
         self.image.fill((255, 255, 255))
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y        
+        self.rect.y = y  
+    def setY(self, y):
+        self.rect.y = y
+def updateScreen():
+    screen.fill((0, 0, 0))
+    #Gets the camera offset on the Y axis
+    offsetY = CENTER_Y-player.rect.y
+    for sprite in allSprites:
+        screen.blit(sprite.image, (sprite.rect.x, sprite.rect.y+offsetY))
+    pygame.display.flip()
 
-SCREEN_SIZE = [1280, 720]
+SCREEN_SIZE = [900, 720]
+CENTER_Y = SCREEN_SIZE[1]/2
 screen = pygame.display.set_mode(SCREEN_SIZE)
 clock = pygame.time.Clock()
 allSprites = pygame.sprite.Group()
 walls = pygame.sprite.Group()
+
 player = Player()
 allSprites.add(player)
+sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 50, SCREEN_SIZE[1]*1.2), Wall(0, -SCREEN_SIZE[1]/2, 50, SCREEN_SIZE[1]*1.2)]
+for wall in sideWalls:
+    print(wall.rect)
+    allSprites.add(wall)
+    walls.add(wall)
 wall = Wall(100, 100, 600, 100)
 walls.add(wall)
 allSprites.add(wall)
@@ -108,9 +124,9 @@ while(running):
     for event in pygame.event.get():
         if(event.type == pygame.QUIT):
             running = False
-    screen.fill((0, 0, 0))
+    #Moves the side walls so the player cannot go over them
+    for wall in sideWalls:
+        wall.setY(player.rect.y - SCREEN_SIZE[1]/2*1.2)
     allSprites.update()
-    for sprite in allSprites:
-        screen.blit(sprite.image, sprite.rect)
-    pygame.display.update()
+    updateScreen()
     clock.tick(120)
