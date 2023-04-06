@@ -95,14 +95,20 @@ class Wall(pygame.sprite.Sprite):
         self.rect.y = y
 def updateScreen():
     screen.fill((0, 0, 0))
-    #Gets the camera offset on the Y axis
-    offsetY = CENTER_Y-player.rect.y
+    offsets = getCameraOffsets()
     for sprite in allSprites:
-        screen.blit(sprite.image, (sprite.rect.x, sprite.rect.y+offsetY))
+        screen.blit(sprite.image, (sprite.rect.x+offsets[0], sprite.rect.y+offsets[1]+offsets[2]))
     pygame.display.flip()
+def getCameraOffsets():#These offsets are the offsets that are added to the rect value when drawing sprites on screen to make it look like a camera follows the player around
+    #Gets the offset based on cursor position
+    cursorOffsetY = (CENTER[1]-pygame.mouse.get_pos()[1])/3
+    cursorOffsetX = (CENTER[0]-pygame.mouse.get_pos()[0])/9
+    #Gets the camera offset on the Y axis based on player's position
+    offsetY = CENTER[1]-player.rect.y
+    return [cursorOffsetX, cursorOffsetY, offsetY]
 
 SCREEN_SIZE = [900, 720]
-CENTER_Y = SCREEN_SIZE[1]/2
+CENTER = [SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2]
 screen = pygame.display.set_mode(SCREEN_SIZE)
 clock = pygame.time.Clock()
 allSprites = pygame.sprite.Group()
@@ -110,9 +116,8 @@ walls = pygame.sprite.Group()
 
 player = Player()
 allSprites.add(player)
-sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 50, SCREEN_SIZE[1]*1.2), Wall(0, -SCREEN_SIZE[1]/2, 50, SCREEN_SIZE[1]*1.2)]
+sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2), Wall(-450, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2)]#NOTE: *1.2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
 for wall in sideWalls:
-    print(wall.rect)
     allSprites.add(wall)
     walls.add(wall)
 wall = Wall(100, 100, 600, 100)
@@ -126,7 +131,7 @@ while(running):
             running = False
     #Moves the side walls so the player cannot go over them
     for wall in sideWalls:
-        wall.setY(player.rect.y - SCREEN_SIZE[1]/2*1.2)
+        wall.setY(player.rect.y - SCREEN_SIZE[1]/2*2)#NOTE: *1.2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
     allSprites.update()
     updateScreen()
     clock.tick(120)
