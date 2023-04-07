@@ -1,4 +1,5 @@
 import pygame
+import random
 pygame.init()
 
 class Vector2:
@@ -93,12 +94,14 @@ class Wall(pygame.sprite.Sprite):
         self.rect.y = y  
     def setY(self, y):
         self.rect.y = y
+
 def updateScreen():
     screen.fill((0, 0, 0))
     offsets = getCameraOffsets()
     for sprite in allSprites:
         screen.blit(sprite.image, (sprite.rect.x+offsets[0], sprite.rect.y+offsets[1]+offsets[2]))
     pygame.display.flip()
+
 def getCameraOffsets():#These offsets are the offsets that are added to the rect value when drawing sprites on screen to make it look like a camera follows the player around
     #Gets the offset based on cursor position
     cursorOffsetY = (CENTER[1]-pygame.mouse.get_pos()[1])/3
@@ -120,9 +123,10 @@ sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2), 
 for wall in sideWalls:
     allSprites.add(wall)
     walls.add(wall)
-wall = Wall(100, 100, 600, 100)
-walls.add(wall)
-allSprites.add(wall)
+for y in range(0, -450000, -225):
+    wall = Wall(random.randint(0, 500), y, random.randint(80, 300), 36)
+    walls.add(wall)
+    allSprites.add(wall)
 running = True
 
 while(running):
