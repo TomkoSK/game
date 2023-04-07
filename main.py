@@ -17,7 +17,7 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.velocity = Vector2(0, 0)
         self.ACCELERATION = 1.5
-        self.MAX_SPEED = 5
+        self.maxSpeed = 4
         self.DECELERATION = 1
     def move(self):
         keys = pygame.key.get_pressed()
@@ -46,16 +46,16 @@ class Player(pygame.sprite.Sprite):
         if(keys[pygame.K_w]):
             self.velocity.y -= self.ACCELERATION
         #Decreases the player's velocity if it's above the max
-        if(abs(self.velocity.x) > self.MAX_SPEED):
+        if(abs(self.velocity.x) > self.maxSpeed):
             if(self.velocity.x > 0):
-                self.velocity.x = self.MAX_SPEED
+                self.velocity.x = self.maxSpeed
             elif(self.velocity.x < 0):
-                self.velocity.x = -self.MAX_SPEED
-        if(abs(self.velocity.y) > self.MAX_SPEED):
+                self.velocity.x = -self.maxSpeed
+        if(abs(self.velocity.y) > self.maxSpeed):
             if(self.velocity.y > 0):
-                self.velocity.y = self.MAX_SPEED
+                self.velocity.y = self.maxSpeed
             elif(self.velocity.y < 0):
-                self.velocity.y = -self.MAX_SPEED
+                self.velocity.y = -self.maxSpeed
         #Detects collision
         collideRectX = self.rect.copy()
         #Simulates moving the rectangle by the velocity, if it crashes into a wall the velocity is decreased to stop at the wall
@@ -95,11 +95,35 @@ class Wall(pygame.sprite.Sprite):
     def setY(self, y):
         self.rect.y = y
 
+class StaminaBar(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.length = 380
+        self.height = 30
+        self.image = pygame.Surface((self.length, self.height))
+        self.edgeColor = (100,100,100)
+        self.edgeWidth = 5
+        self.rect = self.image.get_rect()
+        self.rect.x = 510
+        self.rect.y = 10
+        self.value = 380
+    def setValue(self, value):
+        self.rect.value = value
+    def update(self):
+        self.image.fill((255,0,0))
+        pygame.draw.rect(self.image, (0,255,0), (0, 0, self.value, self.height))
+        pygame.draw.rect(self.image, self.edgeColor, (0, 0, self.length, self.edgeWidth))
+        pygame.draw.rect(self.image, self.edgeColor, (0, self.height-self.edgeWidth, 480, self.edgeWidth))
+        pygame.draw.rect(self.image, self.edgeColor, (0, 0, self.edgeWidth, self.height))
+        pygame.draw.rect(self.image, self.edgeColor, (self.length-self.edgeWidth, 0, self.edgeWidth, self.height))
+
+
 def updateScreen():
     screen.fill((0, 0, 0))
     offsets = getCameraOffsets()
     for sprite in allSprites:
         screen.blit(sprite.image, (sprite.rect.x+offsets[0], sprite.rect.y+offsets[1]+offsets[2]))
+    screen.blit(staminaBar.image, staminaBar.rect)
     pygame.display.flip()
 
 def getCameraOffsets():#These offsets are the offsets that are added to the rect value when drawing sprites on screen to make it look like a camera follows the player around
@@ -117,9 +141,11 @@ clock = pygame.time.Clock()
 allSprites = pygame.sprite.Group()
 walls = pygame.sprite.Group()
 
+
 player = Player()
 allSprites.add(player)
-sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2), Wall(-450, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2)]#NOTE: *1.2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
+staminaBar = StaminaBar()#Stamina bar isn't added to allSprites so its position on the screen isn't moved because of the camera
+sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2), Wall(-450, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2)]#NOTE: *2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
 for wall in sideWalls:
     allSprites.add(wall)
     walls.add(wall)
@@ -133,9 +159,34 @@ while(running):
     for event in pygame.event.get():
         if(event.type == pygame.QUIT):
             running = False
+        #Changes max movespeed when shift is pressed and releases
+        elif(event.type == pygame.KEYDOWN):
+            if(event.key == pygame.K_LSHIFT and staminaBar.value > 0):
+                player.maxSpeed = 6
+        elif(event.type == pygame.KEYUP):
+            if(event.key == pygame.K_LSHIFT):
+                player.maxSpeed = 4
+    #Decreases stamina bar if player is holding shift
+    keys = pygame.key.get_pressed()
+    if(keys[pygame.K_LSHIFT]):
+        if(staminaBar.value - 1.5 > 0):
+            staminaBar.value -= 1.5
+        else:
+            staminaBar.value = 0
+            #if stamina bar reaches 0 move speed goes back down
+            if(player.maxSpeed == 6):
+                player.maxSpeed = 4
+    else:
+        if(staminaBar.value + 0.7 <= staminaBar.length):
+            staminaBar.value += 0.7
+        else:
+            staminaBar.value = staminaBar.length
     #Moves the side walls so the player cannot go over them
     for wall in sideWalls:
-        wall.setY(player.rect.y - SCREEN_SIZE[1]/2*2)#NOTE: *1.2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
+        wall.setY(player.rect.y - SCREEN_SIZE[1]/2*2)#NOTE: *2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
+    #Updates all sprites
     allSprites.update()
+    staminaBar.update()
+    #Updates the screen
     updateScreen()
     clock.tick(120)
