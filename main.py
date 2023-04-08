@@ -1,5 +1,7 @@
 import pygame
 import random
+import math
+import time
 pygame.init()
 
 class Vector2:
@@ -102,9 +104,9 @@ class StaminaBar(pygame.sprite.Sprite):
         self.height = 30
         self.image = pygame.Surface((self.length, self.height))
         self.edgeColor = (100,100,100)
-        self.edgeWidth = 5
+        self.edgeWidth = 3
         self.rect = self.image.get_rect()
-        self.rect.x = 510
+        self.rect.x = SCREEN_SIZE[0]-390
         self.rect.y = 10
         self.value = 380
     def setValue(self, value):
@@ -117,6 +119,31 @@ class StaminaBar(pygame.sprite.Sprite):
         pygame.draw.rect(self.image, self.edgeColor, (0, 0, self.edgeWidth, self.height))
         pygame.draw.rect(self.image, self.edgeColor, (self.length-self.edgeWidth, 0, self.edgeWidth, self.height))
 
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.birthTime = time.time()
+        self.speed = 15
+        self.size = 20
+        self.image = pygame.Surface((self.size, self.size))
+        self.image.fill((255, 255, 0))
+        self.rect = self.image.get_rect()
+        self.x, self.y = player.rect.center[0], player.rect.center[1]#Urounded x and y for accuracy with decimals
+        self.rect.center = (self.x, self.y)
+        mousePos = pygame.mouse.get_pos()
+        offsets = getCameraOffsets()
+        playerPosOnScreen = (player.rect.center[0]+offsets[0], player.rect.center[1]+offsets[1]+offsets[2])
+        angle = math.atan2(mousePos[1] - playerPosOnScreen[1], mousePos[0] - playerPosOnScreen[0])
+        self.velocity = Vector2(math.cos(angle)*self.speed, math.sin(angle)*self.speed)
+    def update(self):
+        if(time.time()-self.birthTime > 3):#If the bullet somehow exists for more than 3 seconds it disappears
+            self.kill()
+        for sprite in walls:#If bullet collides with wall it disappears
+            if(self.rect.colliderect(sprite.rect)):
+                self.kill()
+        self.x += self.velocity.x
+        self.y += self.velocity.y
+        self.rect.center = (self.x, self.y)
 
 def updateScreen():
     screen.fill((0, 0, 0))
@@ -134,9 +161,11 @@ def getCameraOffsets():#These offsets are the offsets that are added to the rect
     offsetY = CENTER[1]-player.rect.y
     return [cursorOffsetX, cursorOffsetY, offsetY]
 
-SCREEN_SIZE = [900, 720]
+screen = pygame.display.set_mode((900, 900))
+SCREEN_SIZE = screen.get_size()
 CENTER = [SCREEN_SIZE[0]/2, SCREEN_SIZE[1]/2]
-screen = pygame.display.set_mode(SCREEN_SIZE)
+SHOT_COOLDOWN = 0.3
+shootTime = 0
 clock = pygame.time.Clock()
 allSprites = pygame.sprite.Group()
 walls = pygame.sprite.Group()
@@ -145,7 +174,8 @@ walls = pygame.sprite.Group()
 player = Player()
 allSprites.add(player)
 staminaBar = StaminaBar()#Stamina bar isn't added to allSprites so its position on the screen isn't moved because of the camera
-sideWalls = [Wall(SCREEN_SIZE[0]-50, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2), Wall(-450, -SCREEN_SIZE[1]/2, 500, SCREEN_SIZE[1]*2)]#NOTE: *2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
+sideWallsWidth = SCREEN_SIZE[0]-800
+sideWalls = [Wall(SCREEN_SIZE[0]-sideWallsWidth/2, -SCREEN_SIZE[1]/2, 1000, SCREEN_SIZE[1]*2), Wall(sideWallsWidth/2-1000, -SCREEN_SIZE[1]/2, 1000, SCREEN_SIZE[1]*2)]#NOTE: *2 is just a magic number, the wall is a bit longer than the screen so the player can't see the end of it
 for wall in sideWalls:
     allSprites.add(wall)
     walls.add(wall)
@@ -159,6 +189,11 @@ while(running):
     for event in pygame.event.get():
         if(event.type == pygame.QUIT):
             running = False
+        elif(event.type == pygame.MOUSEBUTTONDOWN and event.button == 1):
+            if(time.time() - shootTime > SHOT_COOLDOWN):
+                shootTime = time.time()
+                bullet = Bullet()
+                allSprites.add(bullet)
         #Changes max movespeed when shift is pressed and releases
         elif(event.type == pygame.KEYDOWN):
             if(event.key == pygame.K_LSHIFT and staminaBar.value > 0):
